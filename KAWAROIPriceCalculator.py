@@ -12,6 +12,70 @@ REPAIR_PERIOD_MS = REPAIR_PERIOD_DAYS*DAY_TIME_MS
 ROI_PERIOD_DAYS = 30
 ROI_PERIOD_MS = ROI_PERIOD_DAYS*DAY_TIME_MS
 
+class PopulationCost:
+    def __init__(self, pioneer = 0, settler = 0, technician = 0, engineer = 0, scientist = 0):
+        self.Pioneer = pioneer
+        self.Settler = settler
+        self.Technician = technician
+        self.Engineer = engineer
+        self.Scientist = scientist
+        self.Extras = {}
+    
+    def __add__(self, other):
+        pioneer = self.Pioneer + other.Pioneer
+        settler = self.Settler + other.Settler
+        technician = self.Technician + other.Technician
+        engineer = self.Engineer + other.Engineer
+        scientist = self.Scientist + other.Scientist
+        return PopulationCost(pioneer, settler, technician, engineer, scientist)
+    
+    __radd__ = __add__
+    
+    def __sub__(self, other):
+        pioneer = self.Pioneer - other.Pioneer
+        settler = self.Settler - other.Settler
+        technician = self.Technician - other.Technician
+        engineer = self.Engineer - other.Engineer
+        scientist = self.Scientist - other.Scientist
+        return PopulationCost(pioneer, settler, technician, engineer, scientist)
+    
+    def __rsub__(self, other):
+        pioneer = other.Pioneer - self.Pioneer
+        settler = other.Settler - self.Settler
+        technician = other.Technician - self.Technician
+        engineer = other.Engineer - self.Engineer
+        scientist = other.Scientist - self.Scientist
+        return PopulationCost(pioneer, settler, technician, engineer, scientist)
+    
+    def __mul__(self, scaler):
+        pioneer = self.Pioneer * scaler
+        settler = self.Settler * scaler
+        technician = self.Technician * scaler
+        engineer = self.Engineer * scaler
+        scientist = self.Scientist * scaler
+        return PopulationCost(pioneer, settler, technician, engineer, scientist)
+    
+    __rmul__ = __mul__
+    
+    def __truediv__(self, scaler):
+        pioneer = self.Pioneer / scaler
+        settler = self.Settler / scaler
+        technician = self.Technician / scaler
+        engineer = self.Engineer / scaler
+        scientist = self.Scientist / scaler
+        return PopulationCost(pioneer, settler, technician, engineer, scientist)
+    
+    def __rtruediv__(self, scaler):
+        pioneer = scaler / self.Pioneer
+        settler = scaler / self.Settler
+        technician = scaler / self.Technician
+        engineer = scaler / self.Engineer
+        scientist = scaler / self.Scientist
+        return PopulationCost(pioneer, settler, technician, engineer, scientist)
+    
+    def __str__(self):
+        return '({},{},{},{},{})'.format(self.Pioneer, self.Settler, self.Technician, self.Engineer, self.Scientist)
+
 def query_FNAR_REST_list(url, key_field):
     # documentation: https://doc.fnar.net/
     out_dictionary = {}
@@ -137,7 +201,7 @@ def calculate_desired_profit(cur_material, output_count, input_costs, repair_cos
     # Add desired profit: ROI in this case
     recipe_time_fraction = recipe_time/ROI_PERIOD_MS # fraction of ROI needed for each recipe run
     base_output_per_run = output_count*base_setup['BuildingCount']
-    desired_profit = {'PIONEER':0,'SETTLER':0,'TECHNICIAN':0,'ENGINEER':0,'SCIENTIST':0}
+    desired_profit = PopulationCost()
     for building in base_setup['BaseList']:
         for building_mat in building['BuildingCosts']:
             mat_ticker = building_mat['CommodityTicker']
@@ -150,11 +214,7 @@ def calculate_desired_profit(cur_material, output_count, input_costs, repair_cos
                 input_cost_cur = input_cost_list[mat_ticker]
                 repair_cost_cur = repair_cost_list[mat_ticker]
                 desired_profit_cur = desired_profit_list[mat_ticker]
-            desired_profit['PIONEER'] = desired_profit['PIONEER'] + recipe_time_fraction/base_output_per_run*mat_build_quantity*(base_cost_list[mat_ticker]['PIONEER'] + input_cost_cur['PIONEER'] + repair_cost_cur['PIONEER'] + desired_profit_cur['PIONEER'])
-            desired_profit['SETTLER'] = desired_profit['SETTLER'] + recipe_time_fraction/base_output_per_run*mat_build_quantity*(base_cost_list[mat_ticker]['SETTLER'] + input_cost_cur['SETTLER'] + repair_cost_cur['SETTLER'] + desired_profit_cur['SETTLER'])
-            desired_profit['TECHNICIAN'] = desired_profit['TECHNICIAN'] + recipe_time_fraction/base_output_per_run*mat_build_quantity*(base_cost_list[mat_ticker]['TECHNICIAN'] + input_cost_cur['TECHNICIAN'] + repair_cost_cur['TECHNICIAN'] + desired_profit_cur['TECHNICIAN'])
-            desired_profit['ENGINEER'] = desired_profit['ENGINEER'] + recipe_time_fraction/base_output_per_run*mat_build_quantity*(base_cost_list[mat_ticker]['ENGINEER'] + input_cost_cur['ENGINEER'] + repair_cost_cur['ENGINEER'] + desired_profit_cur['ENGINEER'])
-            desired_profit['SCIENTIST'] = desired_profit['SCIENTIST'] + recipe_time_fraction/base_output_per_run*mat_build_quantity*(base_cost_list[mat_ticker]['SCIENTIST'] + input_cost_cur['SCIENTIST'] + repair_cost_cur['SCIENTIST'] + desired_profit_cur['SCIENTIST'])
+            desired_profit += recipe_time_fraction/base_output_per_run*mat_build_quantity*(base_cost_list[mat_ticker] + input_cost_cur + repair_cost_cur + desired_profit_cur)
         # add something for MCG and any other planet based materials
         for mat_ticker in planet_mats:
             if mat_ticker == 'MCG':
@@ -177,34 +237,26 @@ def calculate_desired_profit(cur_material, output_count, input_costs, repair_cos
                 input_cost_cur = input_cost_list[mat_ticker]
                 repair_cost_cur = repair_cost_list[mat_ticker]
                 desired_profit_cur = desired_profit_list[mat_ticker]
-            desired_profit['PIONEER'] = desired_profit['PIONEER'] + recipe_time_fraction/base_output_per_run*mat_build_quantity*(base_cost_list[mat_ticker]['PIONEER'] + input_cost_cur['PIONEER'] + repair_cost_cur['PIONEER'] + desired_profit_cur['PIONEER'])
-            desired_profit['SETTLER'] = desired_profit['SETTLER'] + recipe_time_fraction/base_output_per_run*mat_build_quantity*(base_cost_list[mat_ticker]['SETTLER'] + input_cost_cur['SETTLER'] + repair_cost_cur['SETTLER'] + desired_profit_cur['SETTLER'])
-            desired_profit['TECHNICIAN'] = desired_profit['TECHNICIAN'] + recipe_time_fraction/base_output_per_run*mat_build_quantity*(base_cost_list[mat_ticker]['TECHNICIAN'] + input_cost_cur['TECHNICIAN'] + repair_cost_cur['TECHNICIAN'] + desired_profit_cur['TECHNICIAN'])
-            desired_profit['ENGINEER'] = desired_profit['ENGINEER'] + recipe_time_fraction/base_output_per_run*mat_build_quantity*(base_cost_list[mat_ticker]['ENGINEER'] + input_cost_cur['ENGINEER'] + repair_cost_cur['ENGINEER'] + desired_profit_cur['ENGINEER'])
-            desired_profit['SCIENTIST'] = desired_profit['SCIENTIST'] + recipe_time_fraction/base_output_per_run*mat_build_quantity*(base_cost_list[mat_ticker]['SCIENTIST'] + input_cost_cur['SCIENTIST'] + repair_cost_cur['SCIENTIST'] + desired_profit_cur['SCIENTIST'])
+            desired_profit = desired_profit + recipe_time_fraction/base_output_per_run*mat_build_quantity*(base_cost_list[mat_ticker] + input_cost_cur + repair_cost_cur + desired_profit_cur)
     
     return desired_profit
 
 def calculate_population_cost(output_count, building, recipe_time):
     # Calculate population costs
     time_quant_factor = recipe_time/output_count
-    population_cost = {'PIONEER':building['Pioneers']*time_quant_factor,'SETTLER':building['Settlers']*time_quant_factor,'TECHNICIAN':building['Technicians']*time_quant_factor,'ENGINEER':building['Engineers']*time_quant_factor,'SCIENTIST':building['Scientists']*time_quant_factor}
+    population_cost = PopulationCost(building['Pioneers']*time_quant_factor,building['Settlers']*time_quant_factor,building['Technicians']*time_quant_factor,building['Engineers']*time_quant_factor,building['Scientists']*time_quant_factor)
     return population_cost
 
 def calculate_input_cost(cur_material, output_count, inputs, base_cost_list, input_cost_list, repair_cost_list, desired_profit_list, use_cur_material_costs = True):
     # Calculate input costs
-    input_costs = {'PIONEER':0,'SETTLER':0,'TECHNICIAN':0,'ENGINEER':0,'SCIENTIST':0}
+    input_costs = PopulationCost()
     for input_mat in inputs:
         mat_ticker = input_mat['Ticker']
         if use_cur_material_costs and mat_ticker == cur_material:
             input_cost_cur = input_costs
         else:
             input_cost_cur = input_cost_list[mat_ticker]
-        input_costs['PIONEER'] = input_costs['PIONEER'] + input_mat['Amount']/output_count*(base_cost_list[mat_ticker]['PIONEER'] + input_cost_cur['PIONEER'] + repair_cost_list[mat_ticker]['PIONEER'] + desired_profit_list[mat_ticker]['PIONEER'])
-        input_costs['SETTLER'] = input_costs['SETTLER'] + input_mat['Amount']/output_count*(base_cost_list[mat_ticker]['SETTLER'] + input_cost_cur['SETTLER'] + repair_cost_list[mat_ticker]['SETTLER'] + desired_profit_list[mat_ticker]['SETTLER'])
-        input_costs['TECHNICIAN'] = input_costs['TECHNICIAN'] + input_mat['Amount']/output_count*(base_cost_list[mat_ticker]['TECHNICIAN'] + input_cost_cur['TECHNICIAN'] + repair_cost_list[mat_ticker]['TECHNICIAN'] + desired_profit_list[mat_ticker]['TECHNICIAN'])
-        input_costs['ENGINEER'] = input_costs['ENGINEER'] + input_mat['Amount']/output_count*(base_cost_list[mat_ticker]['ENGINEER'] + input_cost_cur['ENGINEER'] + repair_cost_list[mat_ticker]['ENGINEER'] + desired_profit_list[mat_ticker]['ENGINEER'])
-        input_costs['SCIENTIST'] = input_costs['SCIENTIST'] + input_mat['Amount']/output_count*(base_cost_list[mat_ticker]['SCIENTIST'] + input_cost_cur['SCIENTIST'] + repair_cost_list[mat_ticker]['SCIENTIST'] + desired_profit_list[mat_ticker]['SCIENTIST'])
+        input_costs = input_costs + input_mat['Amount']/output_count*(base_cost_list[mat_ticker] + input_cost_cur + repair_cost_list[mat_ticker] + desired_profit_list[mat_ticker])
     
     return input_costs
 
@@ -212,7 +264,7 @@ def calculate_repair_cost(cur_material, output_count, building_costs, input_cost
     # Add repair costs
     repair_material_fraction = REPAIR_PERIOD_DAYS/180 # fraction of repair materials needed due to repair time
     recipe_time_fraction = recipe_time/REPAIR_PERIOD_MS # fraction of repair materials needed for each recipe run
-    repair_costs = {'PIONEER':0,'SETTLER':0,'TECHNICIAN':0,'ENGINEER':0,'SCIENTIST':0}
+    repair_costs = PopulationCost()
     for building_mat in building_costs:
         mat_ticker = building_mat['CommodityTicker']
         mat_build_quantity = building_mat['Amount']
@@ -223,11 +275,7 @@ def calculate_repair_cost(cur_material, output_count, building_costs, input_cost
         else:
             input_cost_cur = input_cost_list[mat_ticker]
             repair_cost_cur = repair_cost_list[mat_ticker]
-        repair_costs['PIONEER'] = repair_costs['PIONEER'] + recipe_time_fraction/output_count*mat_repair_quantity*(base_cost_list[mat_ticker]['PIONEER'] + input_cost_cur['PIONEER'] + repair_cost_cur['PIONEER'] + desired_profit_list[mat_ticker]['PIONEER'])
-        repair_costs['SETTLER'] = repair_costs['SETTLER'] + recipe_time_fraction/output_count*mat_repair_quantity*(base_cost_list[mat_ticker]['SETTLER'] + input_cost_cur['SETTLER'] + repair_cost_cur['SETTLER'] + desired_profit_list[mat_ticker]['SETTLER'])
-        repair_costs['TECHNICIAN'] = repair_costs['TECHNICIAN'] + recipe_time_fraction/output_count*mat_repair_quantity*(base_cost_list[mat_ticker]['TECHNICIAN'] + input_cost_cur['TECHNICIAN'] + repair_cost_cur['TECHNICIAN'] + desired_profit_list[mat_ticker]['TECHNICIAN'])
-        repair_costs['ENGINEER'] = repair_costs['ENGINEER'] + recipe_time_fraction/output_count*mat_repair_quantity*(base_cost_list[mat_ticker]['ENGINEER'] + input_cost_cur['ENGINEER'] + repair_cost_cur['ENGINEER'] + desired_profit_list[mat_ticker]['ENGINEER'])
-        repair_costs['SCIENTIST'] = repair_costs['SCIENTIST'] + recipe_time_fraction/output_count*mat_repair_quantity*(base_cost_list[mat_ticker]['SCIENTIST'] + input_cost_cur['SCIENTIST'] + repair_cost_cur['SCIENTIST'] + desired_profit_list[mat_ticker]['SCIENTIST'])
+        repair_costs = repair_costs + recipe_time_fraction/output_count*mat_repair_quantity*(base_cost_list[mat_ticker] + input_cost_cur + repair_cost_cur + desired_profit_list[mat_ticker])
     # add something for MCG and any other planet based materials
     for mat_ticker in planet_mats:
         if mat_ticker == 'MCG':
@@ -253,11 +301,7 @@ def calculate_repair_cost(cur_material, output_count, building_costs, input_cost
         else:
             input_cost_cur = input_cost_list[mat_ticker]
             repair_cost_cur = repair_cost_list[mat_ticker]
-        repair_costs['PIONEER'] = repair_costs['PIONEER'] + recipe_time_fraction/output_count*mat_repair_quantity*(base_cost_list[mat_ticker]['PIONEER'] + input_cost_cur['PIONEER'] + repair_cost_cur['PIONEER'] + desired_profit_list[mat_ticker]['PIONEER'])
-        repair_costs['SETTLER'] = repair_costs['SETTLER'] + recipe_time_fraction/output_count*mat_repair_quantity*(base_cost_list[mat_ticker]['SETTLER'] + input_cost_cur['SETTLER'] + repair_cost_cur['SETTLER'] + desired_profit_list[mat_ticker]['SETTLER'])
-        repair_costs['TECHNICIAN'] = repair_costs['TECHNICIAN'] + recipe_time_fraction/output_count*mat_repair_quantity*(base_cost_list[mat_ticker]['TECHNICIAN'] + input_cost_cur['TECHNICIAN'] + repair_cost_cur['TECHNICIAN'] + desired_profit_list[mat_ticker]['TECHNICIAN'])
-        repair_costs['ENGINEER'] = repair_costs['ENGINEER'] + recipe_time_fraction/output_count*mat_repair_quantity*(base_cost_list[mat_ticker]['ENGINEER'] + input_cost_cur['ENGINEER'] + repair_cost_cur['ENGINEER'] + desired_profit_list[mat_ticker]['ENGINEER'])
-        repair_costs['SCIENTIST'] = repair_costs['SCIENTIST'] + recipe_time_fraction/output_count*mat_repair_quantity*(base_cost_list[mat_ticker]['SCIENTIST'] + input_cost_cur['SCIENTIST'] + repair_cost_cur['SCIENTIST'] + desired_profit_list[mat_ticker]['SCIENTIST'])
+        repair_costs = repair_costs + recipe_time_fraction/output_count*mat_repair_quantity*(base_cost_list[mat_ticker] + input_cost_cur + repair_cost_cur + desired_profit_list[mat_ticker])
     
     return repair_costs
 
@@ -269,27 +313,16 @@ def calculate_total_cost(cur_material, output_count, inputs, building_costs, rec
     desired_profit = calculate_desired_profit(cur_material, output_count, input_costs, repair_costs, recipe_time, planet_mats, base_cost_list, input_cost_list, repair_cost_list, desired_profit_list, base_setup, use_cur_material_costs)
 
     # calculate total costs
-    total_costs = {'PIONEER':0,'SETTLER':0,'TECHNICIAN':0,'ENGINEER':0,'SCIENTIST':0}
-    # if desired_profit['PIONEER'] > base_cost['PIONEER'] + input_costs['PIONEER'] + repair_costs['PIONEER']:
-    #     desired_profit['PIONEER'] = base_cost['PIONEER'] + input_costs['PIONEER'] + repair_costs['PIONEER']
-    total_costs['PIONEER'] = base_cost['PIONEER'] + input_costs['PIONEER'] + repair_costs['PIONEER'] + desired_profit['PIONEER']
-    # if desired_profit['SETTLER'] > base_cost['SETTLER'] + input_costs['SETTLER'] + repair_costs['SETTLER']:
-    #     desired_profit['SETTLER'] = base_cost['SETTLER'] + input_costs['SETTLER'] + repair_costs['SETTLER']
-    total_costs['SETTLER'] = base_cost['SETTLER'] + input_costs['SETTLER'] + repair_costs['SETTLER'] + desired_profit['SETTLER']
-    # if desired_profit['TECHNICIAN'] > base_cost['TECHNICIAN'] + input_costs['TECHNICIAN'] + repair_costs['TECHNICIAN']:
-    #     desired_profit['TECHNICIAN'] = base_cost['TECHNICIAN'] + input_costs['TECHNICIAN'] + repair_costs['TECHNICIAN']
-    total_costs['TECHNICIAN'] = base_cost['TECHNICIAN'] + input_costs['TECHNICIAN'] + repair_costs['TECHNICIAN'] + desired_profit['TECHNICIAN']
-    # if desired_profit['ENGINEER'] > base_cost['ENGINEER'] + input_costs['ENGINEER'] + repair_costs['ENGINEER']:
-    #     desired_profit['ENGINEER'] = base_cost['ENGINEER'] + input_costs['ENGINEER'] + repair_costs['ENGINEER']
-    total_costs['ENGINEER'] = base_cost['ENGINEER'] + input_costs['ENGINEER'] + repair_costs['ENGINEER'] + desired_profit['ENGINEER']
-    # if desired_profit['SCIENTIST'] > base_cost['SCIENTIST'] + input_costs['SCIENTIST'] + repair_costs['SCIENTIST']:
-    #     desired_profit['SCIENTIST'] = base_cost['SCIENTIST'] + input_costs['SCIENTIST'] + repair_costs['SCIENTIST']
-    total_costs['SCIENTIST'] = base_cost['SCIENTIST'] + input_costs['SCIENTIST'] + repair_costs['SCIENTIST'] + desired_profit['SCIENTIST']
+    total_costs = PopulationCost()
+    total_costs = base_cost + input_costs + repair_costs + desired_profit
     
     return input_costs, repair_costs, desired_profit, total_costs
 
 if __name__ == '__main__':
-    args = sys.argv[1:]
+    # test = PopulationCost(1,0,0,0,0)
+    # print(test*1)
+    # sys.exit()
+    # args = sys.argv[1:]
     # username = input('username:')
     # password = getpass.getpass('password:')
     cache_file = "cache.pickle"
@@ -393,26 +426,22 @@ if __name__ == '__main__':
 
         # print('{},{},{}'.format(material, recipe['StandardRecipeName'], output))
         material_costs[material] = calculate_population_cost(output, buildings[recipe['BuildingTicker']], recipe['TimeMs'])
-        material_costs[material]['recipe'] = recipe
-        material_costs[material]['output'] = output
-        material_costs[material]['planet_mats'] = planet_specific_materials
-        input_costs[material] = {'PIONEER':0,'SETTLER':0,'TECHNICIAN':0,'ENGINEER':0,'SCIENTIST':0}
-        repair_costs[material] = {'PIONEER':0,'SETTLER':0,'TECHNICIAN':0,'ENGINEER':0,'SCIENTIST':0}
-        desired_profit[material] = {'PIONEER':0,'SETTLER':0,'TECHNICIAN':0,'ENGINEER':0,'SCIENTIST':0}
-        total_costs[material] = {'PIONEER':0,'SETTLER':0,'TECHNICIAN':0,'ENGINEER':0,'SCIENTIST':0}
+        material_costs[material].Extras['recipe'] = recipe
+        material_costs[material].Extras['output'] = output
+        material_costs[material].Extras['planet_mats'] = planet_specific_materials
+        input_costs[material] = PopulationCost()
+        repair_costs[material] = PopulationCost()
+        desired_profit[material] = PopulationCost()
+        total_costs[material] = PopulationCost()
 
     # iterate over materials to find final cost
     for n in range(100):
         max_diff_elem = {'diff':-1, 'mat':''}
         for material in material_costs.keys():
             
-            input_costs_temp, repair_costs_temp, desired_profit_temp, total_costs_temp = calculate_total_cost(material, material_costs[material]['output'], material_costs[material]['recipe']['Inputs'], buildings[material_costs[material]['recipe']['BuildingTicker']]['BuildingCosts'], material_costs[material]['recipe']['TimeMs'], buildings[material_costs[material]['recipe']['BuildingTicker']]['AreaCost'], material_costs[material]['planet_mats'], material_costs, input_costs, repair_costs, desired_profit, material_costs[material], base_setups[material_costs[material]['recipe']['BuildingTicker']])
-            pioneers_diff = total_costs_temp['PIONEER'] - total_costs[material]['PIONEER']
-            setttlers_diff = total_costs_temp['SETTLER'] - total_costs[material]['SETTLER']
-            technicians_diff = total_costs_temp['TECHNICIAN'] - total_costs[material]['TECHNICIAN']
-            engineers_diff = total_costs_temp['ENGINEER'] - total_costs[material]['ENGINEER']
-            scientists_diff = total_costs_temp['SCIENTIST'] - total_costs[material]['SCIENTIST']
-            diff_sum = pioneers_diff+setttlers_diff+technicians_diff+engineers_diff+scientists_diff
+            input_costs_temp, repair_costs_temp, desired_profit_temp, total_costs_temp = calculate_total_cost(material, material_costs[material].Extras['output'], material_costs[material].Extras['recipe']['Inputs'], buildings[material_costs[material].Extras['recipe']['BuildingTicker']]['BuildingCosts'], material_costs[material].Extras['recipe']['TimeMs'], buildings[material_costs[material].Extras['recipe']['BuildingTicker']]['AreaCost'], material_costs[material].Extras['planet_mats'], material_costs, input_costs, repair_costs, desired_profit, material_costs[material], base_setups[material_costs[material].Extras['recipe']['BuildingTicker']])
+            population_diff = total_costs_temp - total_costs[material]
+            diff_sum = population_diff.Pioneer+population_diff.Settler+population_diff.Technician+population_diff.Engineer+population_diff.Scientist
             if diff_sum > max_diff_elem['diff']:
                 max_diff_elem['diff'] = diff_sum
                 max_diff_elem['mat'] = material
@@ -426,7 +455,7 @@ if __name__ == '__main__':
             #     print("repair_costs_temp ({}) does not equal repair_costs[{}] ({})".format(repair_costs_temp, material, repair_costs[material]))
             # if total_costs_temp != total_costs[material]:
             #     print("total_costs_temp ({}) does not equal total_costs[{}] ({})".format(total_costs_temp, material, total_costs[material]))
-        print('Largest difference: {} {} ({}, {}, {}, {}, {})'.format(max_diff_elem['mat'], max_diff_elem['diff'], total_costs[max_diff_elem['mat']]['PIONEER'], total_costs[max_diff_elem['mat']]['SETTLER'], total_costs[max_diff_elem['mat']]['TECHNICIAN'], total_costs[max_diff_elem['mat']]['ENGINEER'], total_costs[max_diff_elem['mat']]['SCIENTIST']))
+        print('Largest difference: {} {} ({}, {}, {}, {}, {})'.format(max_diff_elem['mat'], max_diff_elem['diff'], total_costs[max_diff_elem['mat']].Pioneer, total_costs[max_diff_elem['mat']].Settler, total_costs[max_diff_elem['mat']].Technician, total_costs[max_diff_elem['mat']].Engineer, total_costs[max_diff_elem['mat']].Scientist))
         if max_diff_elem['diff'] < 0.001:
             print('Iterations completed at n={}'.format(n))
             break
@@ -435,73 +464,53 @@ if __name__ == '__main__':
     
 
     # calculate costs for workers
-    PIO = {'PIONEER':0,'SETTLER':0,'TECHNICIAN':0,'ENGINEER':0,'SCIENTIST':0}
-    SET = {'PIONEER':0,'SETTLER':0,'TECHNICIAN':0,'ENGINEER':0,'SCIENTIST':0}
-    TEC = {'PIONEER':0,'SETTLER':0,'TECHNICIAN':0,'ENGINEER':0,'SCIENTIST':0}
-    ENG = {'PIONEER':0,'SETTLER':0,'TECHNICIAN':0,'ENGINEER':0,'SCIENTIST':0}
-    SCI = {'PIONEER':0,'SETTLER':0,'TECHNICIAN':0,'ENGINEER':0,'SCIENTIST':0}
+    PIO = PopulationCost()
+    SET = PopulationCost()
+    TEC = PopulationCost()
+    ENG = PopulationCost()
+    SCI = PopulationCost()
     # consumable costs per day per 100 units of population
     for item in [{'mat':'COF','amount':0.5},{'mat':'DW','amount':4},{'mat':'RAT','amount':4},{'mat':'OVE','amount':0.5},{'mat':'PWO','amount':0.2}]:
-        PIO['PIONEER'] = PIO['PIONEER'] + total_costs[item['mat']]['PIONEER']*item['amount']
-        PIO['SETTLER'] = PIO['SETTLER'] + total_costs[item['mat']]['SETTLER']*item['amount']
-        PIO['TECHNICIAN'] = PIO['TECHNICIAN'] + total_costs[item['mat']]['TECHNICIAN']*item['amount']
-        PIO['ENGINEER'] = PIO['ENGINEER'] + total_costs[item['mat']]['ENGINEER']*item['amount']
-        PIO['SCIENTIST'] = PIO['SCIENTIST'] + total_costs[item['mat']]['SCIENTIST']*item['amount']
+        PIO = PIO + total_costs[item['mat']]*item['amount']
     for item in [{'mat':'DW','amount':5},{'mat':'RAT','amount':6},{'mat':'KOM','amount':1},{'mat':'EXO','amount':0.5},{'mat':'REP','amount':0.2},{'mat':'PT','amount':0.5}]:
-        SET['PIONEER'] = SET['PIONEER'] + total_costs[item['mat']]['PIONEER']*item['amount']
-        SET['SETTLER'] = SET['SETTLER'] + total_costs[item['mat']]['SETTLER']*item['amount']
-        SET['TECHNICIAN'] = SET['TECHNICIAN'] + total_costs[item['mat']]['TECHNICIAN']*item['amount']
-        SET['ENGINEER'] = SET['ENGINEER'] + total_costs[item['mat']]['ENGINEER']*item['amount']
-        SET['SCIENTIST'] = SET['SCIENTIST'] + total_costs[item['mat']]['SCIENTIST']*item['amount']
+        SET = SET + total_costs[item['mat']]*item['amount']
     for item in [{'mat':'DW','amount':7.5},{'mat':'RAT','amount':7},{'mat':'ALE','amount':1},{'mat':'MED','amount':0.5},{'mat':'SC','amount':0.1},{'mat':'HMS','amount':0.5},{'mat':'SCN','amount':0.1}]:
-        TEC['PIONEER'] = TEC['PIONEER'] + total_costs[item['mat']]['PIONEER']*item['amount']
-        TEC['SETTLER'] = TEC['SETTLER'] + total_costs[item['mat']]['SETTLER']*item['amount']
-        TEC['TECHNICIAN'] = TEC['TECHNICIAN'] + total_costs[item['mat']]['TECHNICIAN']*item['amount']
-        TEC['ENGINEER'] = TEC['ENGINEER'] + total_costs[item['mat']]['ENGINEER']*item['amount']
-        TEC['SCIENTIST'] = TEC['SCIENTIST'] + total_costs[item['mat']]['SCIENTIST']*item['amount']
+        TEC = TEC + total_costs[item['mat']]*item['amount']
     for item in [{'mat':'DW','amount':10},{'mat':'MED','amount':0.5},{'mat':'GIN','amount':1},{'mat':'FIM','amount':7},{'mat':'VG','amount':0.2},{'mat':'HSS','amount':0.2},{'mat':'PDA','amount':0.1}]:
-        ENG['PIONEER'] = ENG['PIONEER'] + total_costs[item['mat']]['PIONEER']*item['amount']
-        ENG['SETTLER'] = ENG['SETTLER'] + total_costs[item['mat']]['SETTLER']*item['amount']
-        ENG['TECHNICIAN'] = ENG['TECHNICIAN'] + total_costs[item['mat']]['TECHNICIAN']*item['amount']
-        ENG['ENGINEER'] = ENG['ENGINEER'] + total_costs[item['mat']]['ENGINEER']*item['amount']
-        ENG['SCIENTIST'] = ENG['SCIENTIST'] + total_costs[item['mat']]['SCIENTIST']*item['amount']
+        ENG = ENG + total_costs[item['mat']]*item['amount']
     for item in [{'mat':'DW','amount':10},{'mat':'MED','amount':0.5},{'mat':'WIN','amount':1},{'mat':'MEA','amount':7},{'mat':'NST','amount':0.1},{'mat':'LC','amount':0.2},{'mat':'WS','amount':0.1}]:
-        SCI['PIONEER'] = SCI['PIONEER'] + total_costs[item['mat']]['PIONEER']*item['amount']
-        SCI['SETTLER'] = SCI['SETTLER'] + total_costs[item['mat']]['SETTLER']*item['amount']
-        SCI['TECHNICIAN'] = SCI['TECHNICIAN'] + total_costs[item['mat']]['TECHNICIAN']*item['amount']
-        SCI['ENGINEER'] = SCI['ENGINEER'] + total_costs[item['mat']]['ENGINEER']*item['amount']
-        SCI['SCIENTIST'] = SCI['SCIENTIST'] + total_costs[item['mat']]['SCIENTIST']*item['amount']
+        SCI = SCI + total_costs[item['mat']]*item['amount']
     
     # scale to 1 unit of population per ms.
-    Apio = PIO['PIONEER']/100/DAY_TIME_MS
-    Bpio = PIO['SETTLER']/100/DAY_TIME_MS
-    Cpio = PIO['TECHNICIAN']/100/DAY_TIME_MS
-    Dpio = PIO['ENGINEER']/100/DAY_TIME_MS
-    Epio = PIO['SCIENTIST']/100/DAY_TIME_MS
+    Apio = PIO.Pioneer/100/DAY_TIME_MS
+    Bpio = PIO.Settler/100/DAY_TIME_MS
+    Cpio = PIO.Technician/100/DAY_TIME_MS
+    Dpio = PIO.Engineer/100/DAY_TIME_MS
+    Epio = PIO.Scientist/100/DAY_TIME_MS
     
-    Aset = SET['PIONEER']/100/DAY_TIME_MS
-    Bset = SET['SETTLER']/100/DAY_TIME_MS
-    Cset = SET['TECHNICIAN']/100/DAY_TIME_MS
-    Dset = SET['ENGINEER']/100/DAY_TIME_MS
-    Eset = SET['SCIENTIST']/100/DAY_TIME_MS
+    Aset = SET.Pioneer/100/DAY_TIME_MS
+    Bset = SET.Settler/100/DAY_TIME_MS
+    Cset = SET.Technician/100/DAY_TIME_MS
+    Dset = SET.Engineer/100/DAY_TIME_MS
+    Eset = SET.Scientist/100/DAY_TIME_MS
     
-    Atec = TEC['PIONEER']/100/DAY_TIME_MS
-    Btec = TEC['SETTLER']/100/DAY_TIME_MS
-    Ctec = TEC['TECHNICIAN']/100/DAY_TIME_MS
-    Dtec = TEC['ENGINEER']/100/DAY_TIME_MS
-    Etec = TEC['SCIENTIST']/100/DAY_TIME_MS
+    Atec = TEC.Pioneer/100/DAY_TIME_MS
+    Btec = TEC.Settler/100/DAY_TIME_MS
+    Ctec = TEC.Technician/100/DAY_TIME_MS
+    Dtec = TEC.Engineer/100/DAY_TIME_MS
+    Etec = TEC.Scientist/100/DAY_TIME_MS
     
-    Aeng = ENG['PIONEER']/100/DAY_TIME_MS
-    Beng = ENG['SETTLER']/100/DAY_TIME_MS
-    Ceng = ENG['TECHNICIAN']/100/DAY_TIME_MS
-    Deng = ENG['ENGINEER']/100/DAY_TIME_MS
-    Eeng = ENG['SCIENTIST']/100/DAY_TIME_MS
+    Aeng = ENG.Pioneer/100/DAY_TIME_MS
+    Beng = ENG.Settler/100/DAY_TIME_MS
+    Ceng = ENG.Technician/100/DAY_TIME_MS
+    Deng = ENG.Engineer/100/DAY_TIME_MS
+    Eeng = ENG.Scientist/100/DAY_TIME_MS
     
-    Asci = SCI['PIONEER']/100/DAY_TIME_MS
-    Bsci = SCI['SETTLER']/100/DAY_TIME_MS
-    Csci = SCI['TECHNICIAN']/100/DAY_TIME_MS
-    Dsci = SCI['ENGINEER']/100/DAY_TIME_MS
-    Esci = SCI['SCIENTIST']/100/DAY_TIME_MS
+    Asci = SCI.Pioneer/100/DAY_TIME_MS
+    Bsci = SCI.Settler/100/DAY_TIME_MS
+    Csci = SCI.Technician/100/DAY_TIME_MS
+    Dsci = SCI.Engineer/100/DAY_TIME_MS
+    Esci = SCI.Scientist/100/DAY_TIME_MS
 
     PIOc = SETc = TECc = ENGc = SCIc = 500
     PIOc = 2.0e-7
@@ -529,11 +538,11 @@ if __name__ == '__main__':
     with open('material_costs.csv', 'w') as file:
         file.write('{}, {}, {}, {}, {}, {}\n'.format('material', 'total cost', 'repair cost', 'input cost', 'desired profit', 'base unit cost'))
         for material in total_costs.keys():
-            total_costs_ts[material] = total_costs[material]['PIONEER']*PIOc + total_costs[material]['SETTLER']*SETc + total_costs[material]['TECHNICIAN']*TECc + total_costs[material]['ENGINEER']*ENGc + total_costs[material]['SCIENTIST']*SCIc
-            repair_costs_ts[material] = repair_costs[material]['PIONEER']*PIOc + repair_costs[material]['SETTLER']*SETc + repair_costs[material]['TECHNICIAN']*TECc + repair_costs[material]['ENGINEER']*ENGc + repair_costs[material]['SCIENTIST']*SCIc
-            input_costs_ts[material] = input_costs[material]['PIONEER']*PIOc + input_costs[material]['SETTLER']*SETc + input_costs[material]['TECHNICIAN']*TECc + input_costs[material]['ENGINEER']*ENGc + input_costs[material]['SCIENTIST']*SCIc
-            desired_profit_ts[material] = desired_profit[material]['PIONEER']*PIOc + desired_profit[material]['SETTLER']*SETc + desired_profit[material]['TECHNICIAN']*TECc + desired_profit[material]['ENGINEER']*ENGc + desired_profit[material]['SCIENTIST']*SCIc
-            material_costs_ts[material] = material_costs[material]['PIONEER']*PIOc + material_costs[material]['SETTLER']*SETc + material_costs[material]['TECHNICIAN']*TECc + material_costs[material]['ENGINEER']*ENGc + material_costs[material]['SCIENTIST']*SCIc
+            total_costs_ts[material] = total_costs[material].Pioneer*PIOc + total_costs[material].Settler*SETc + total_costs[material].Technician*TECc + total_costs[material].Engineer*ENGc + total_costs[material].Scientist*SCIc
+            repair_costs_ts[material] = repair_costs[material].Pioneer*PIOc + repair_costs[material].Settler*SETc + repair_costs[material].Technician*TECc + repair_costs[material].Engineer*ENGc + repair_costs[material].Scientist*SCIc
+            input_costs_ts[material] = input_costs[material].Pioneer*PIOc + input_costs[material].Settler*SETc + input_costs[material].Technician*TECc + input_costs[material].Engineer*ENGc + input_costs[material].Scientist*SCIc
+            desired_profit_ts[material] = desired_profit[material].Pioneer*PIOc + desired_profit[material].Settler*SETc + desired_profit[material].Technician*TECc + desired_profit[material].Engineer*ENGc + desired_profit[material].Scientist*SCIc
+            material_costs_ts[material] = material_costs[material].Pioneer*PIOc + material_costs[material].Settler*SETc + material_costs[material].Technician*TECc + material_costs[material].Engineer*ENGc + material_costs[material].Scientist*SCIc
             file.write('{}, {}, {}, {}, {}, {}\n'.format(material, total_costs_ts[material], repair_costs_ts[material], input_costs_ts[material], desired_profit_ts[material], material_costs_ts[material]))
     
     with open('recipe_costs.csv', 'w') as file:
@@ -547,11 +556,11 @@ if __name__ == '__main__':
             recipe_cost = calculate_population_cost(1, building, recipe_time)
             input_costs_temp, repair_costs_temp, desired_profit_temp, total_costs_temp = calculate_total_cost('', 1, recipe['Inputs'], building['BuildingCosts'], recipe['TimeMs'], building['AreaCost'], planet_mats, material_costs, input_costs, repair_costs, desired_profit, recipe_cost, base_setups[recipe['BuildingTicker']], False)
 
-            total_costs_temp_ts = total_costs_temp['PIONEER']*PIOc + total_costs_temp['SETTLER']*SETc + total_costs_temp['TECHNICIAN']*TECc + total_costs_temp['ENGINEER']*ENGc + total_costs_temp['SCIENTIST']*SCIc
-            repair_costs_temp_ts = repair_costs_temp['PIONEER']*PIOc + repair_costs_temp['SETTLER']*SETc + repair_costs_temp['TECHNICIAN']*TECc + repair_costs_temp['ENGINEER']*ENGc + repair_costs_temp['SCIENTIST']*SCIc
-            input_costs_temp_ts = input_costs_temp['PIONEER']*PIOc + input_costs_temp['SETTLER']*SETc + input_costs_temp['TECHNICIAN']*TECc + input_costs_temp['ENGINEER']*ENGc + input_costs_temp['SCIENTIST']*SCIc
-            desired_profit_ts = desired_profit_temp['PIONEER']*PIOc + desired_profit_temp['SETTLER']*SETc + desired_profit_temp['TECHNICIAN']*TECc + desired_profit_temp['ENGINEER']*ENGc + desired_profit_temp['SCIENTIST']*SCIc
-            recipe_cost_ts = recipe_cost['PIONEER']*PIOc + recipe_cost['SETTLER']*SETc + recipe_cost['TECHNICIAN']*TECc + recipe_cost['ENGINEER']*ENGc + recipe_cost['SCIENTIST']*SCIc
+            total_costs_temp_ts = total_costs_temp.Pioneer*PIOc + total_costs_temp.Settler*SETc + total_costs_temp.Technician*TECc + total_costs_temp.Engineer*ENGc + total_costs_temp.Scientist*SCIc
+            repair_costs_temp_ts = repair_costs_temp.Pioneer*PIOc + repair_costs_temp.Settler*SETc + repair_costs_temp.Technician*TECc + repair_costs_temp.Engineer*ENGc + repair_costs_temp.Scientist*SCIc
+            input_costs_temp_ts = input_costs_temp.Pioneer*PIOc + input_costs_temp.Settler*SETc + input_costs_temp.Technician*TECc + input_costs_temp.Engineer*ENGc + input_costs_temp.Scientist*SCIc
+            desired_profit_ts = desired_profit_temp.Pioneer*PIOc + desired_profit_temp.Settler*SETc + desired_profit_temp.Technician*TECc + desired_profit_temp.Engineer*ENGc + desired_profit_temp.Scientist*SCIc
+            recipe_cost_ts = recipe_cost.Pioneer*PIOc + recipe_cost.Settler*SETc + recipe_cost.Technician*TECc + recipe_cost.Engineer*ENGc + recipe_cost.Scientist*SCIc
             file.write('{}, {}, {}, {}, {}, {}\n'.format(recipe['StandardRecipeName'], total_costs_temp_ts, repair_costs_temp_ts, input_costs_temp_ts, desired_profit_ts, recipe_cost_ts))
     
     with open('natural_resource_costs.csv','w') as file:
@@ -571,17 +580,13 @@ if __name__ == '__main__':
                 recipe = recipes[recipe_key]
                 building = buildings[recipe['BuildingTicker']]
                 base_cost = {}
-                base_cost['PIONEER'] = natural_resource_building_cost[recipe_key]['PIONEER']/output
-                base_cost['SETTLER'] = natural_resource_building_cost[recipe_key]['SETTLER']/output
-                base_cost['TECHNICIAN'] = natural_resource_building_cost[recipe_key]['TECHNICIAN']/output
-                base_cost['ENGINEER'] = natural_resource_building_cost[recipe_key]['ENGINEER']/output
-                base_cost['SCIENTIST'] = natural_resource_building_cost[recipe_key]['SCIENTIST']/output
+                base_cost = natural_resource_building_cost[recipe_key]/output
                 
                 input_costs_temp, repair_costs_temp, desired_profit_temp, total_costs_temp = calculate_total_cost('', output, recipe['Inputs'], building['BuildingCosts'], recipe['TimeMs'], building['AreaCost'], planet_specific_materials, material_costs, input_costs, repair_costs, desired_profit, base_cost, base_setups[recipe['BuildingTicker']], False)
 
-                total_costs_temp_ts = total_costs_temp['PIONEER']*PIOc + total_costs_temp['SETTLER']*SETc + total_costs_temp['TECHNICIAN']*TECc + total_costs_temp['ENGINEER']*ENGc + total_costs_temp['SCIENTIST']*SCIc
-                repair_costs_temp_ts = repair_costs_temp['PIONEER']*PIOc + repair_costs_temp['SETTLER']*SETc + repair_costs_temp['TECHNICIAN']*TECc + repair_costs_temp['ENGINEER']*ENGc + repair_costs_temp['SCIENTIST']*SCIc
-                input_costs_temp_ts = input_costs_temp['PIONEER']*PIOc + input_costs_temp['SETTLER']*SETc + input_costs_temp['TECHNICIAN']*TECc + input_costs_temp['ENGINEER']*ENGc + input_costs_temp['SCIENTIST']*SCIc
-                desired_profit_temp_ts = desired_profit_temp['PIONEER']*PIOc + desired_profit_temp['SETTLER']*SETc + desired_profit_temp['TECHNICIAN']*TECc + desired_profit_temp['ENGINEER']*ENGc + desired_profit_temp['SCIENTIST']*SCIc
-                base_cost_ts = base_cost['PIONEER']*PIOc + base_cost['SETTLER']*SETc + base_cost['TECHNICIAN']*TECc + base_cost['ENGINEER']*ENGc + base_cost['SCIENTIST']*SCIc
+                total_costs_temp_ts = total_costs_temp.Pioneer*PIOc + total_costs_temp.Settler*SETc + total_costs_temp.Technician*TECc + total_costs_temp.Engineer*ENGc + total_costs_temp.Scientist*SCIc
+                repair_costs_temp_ts = repair_costs_temp.Pioneer*PIOc + repair_costs_temp.Settler*SETc + repair_costs_temp.Technician*TECc + repair_costs_temp.Engineer*ENGc + repair_costs_temp.Scientist*SCIc
+                input_costs_temp_ts = input_costs_temp.Pioneer*PIOc + input_costs_temp.Settler*SETc + input_costs_temp.Technician*TECc + input_costs_temp.Engineer*ENGc + input_costs_temp.Scientist*SCIc
+                desired_profit_temp_ts = desired_profit_temp.Pioneer*PIOc + desired_profit_temp.Settler*SETc + desired_profit_temp.Technician*TECc + desired_profit_temp.Engineer*ENGc + desired_profit_temp.Scientist*SCIc
+                base_cost_ts = base_cost.Pioneer*PIOc + base_cost.Settler*SETc + base_cost.Technician*TECc + base_cost.Engineer*ENGc + base_cost.Scientist*SCIc
                 file.write('{}, {}, {}, {}, {}, {}, {}\n'.format(planet['PlanetNaturalId'], material_ticker, total_costs_temp_ts, repair_costs_temp_ts, input_costs_temp_ts, desired_profit_ts, base_cost_ts))
