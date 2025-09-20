@@ -1,10 +1,7 @@
 import sys
-import urllib
-import urllib.request
 import json
-import pickle
-import os
 import math
+import KAWAUtils
 
 DAY_TIME_MS = 24*60*60*1000
 REPAIR_PERIOD_DAYS = 60
@@ -75,17 +72,6 @@ class PopulationCost:
     
     def __str__(self):
         return '({},{},{},{},{})'.format(self.Pioneer, self.Settler, self.Technician, self.Engineer, self.Scientist)
-
-def query_FNAR_REST_list(url, key_field):
-    # documentation: https://doc.fnar.net/
-    out_dictionary = {}
-    with urllib.request.urlopen(url) as query_response:
-        query_list = json.loads(query_response.read())
-        for item in query_list:
-            if item[key_field] in out_dictionary:
-                print('Found duplicate {} from {}: {}'.format(key_field, url, item[key_field]))
-            out_dictionary[item[key_field]] = item
-    return out_dictionary
 
 def get_planet_build_requirements(planet):
     planet_specific_materials=[]
@@ -319,74 +305,16 @@ def calculate_total_cost(cur_material, output_count, inputs, building_costs, rec
     return input_costs, repair_costs, desired_profit, total_costs
 
 if __name__ == '__main__':
-    # test = PopulationCost(1,0,0,0,0)
-    # print(test*1)
-    # sys.exit()
-    # args = sys.argv[1:]
-    # username = input('username:')
-    # password = getpass.getpass('password:')
-    cache_file = "cache.pickle"
-    if os.path.isfile(cache_file):
-        with open(cache_file, 'rb') as file:
-            print('reading pickle file')
-            buildings, recipes, materials, planets = pickle.load(file)
-    else:
-        buildings = query_FNAR_REST_list('https://rest.fnar.net/building/allbuildings', 'Ticker')
-        recipes = query_FNAR_REST_list('https://rest.fnar.net/recipes/allrecipes', 'StandardRecipeName')
-        materials = query_FNAR_REST_list('https://rest.fnar.net/material/allmaterials', 'Ticker')
-        planets = query_FNAR_REST_list('https://rest.fnar.net/planet/allplanets/full', 'PlanetNaturalId')
-        with open(cache_file, 'wb') as file:
-            print('writing pickle file')
-            pickle.dump([buildings, recipes, materials, planets], file)
+    # read FIO data from the cache or retrieve the date from FIO and cache it.
+    buildings, recipes, materials, planets, materials_byID = KAWAUtils.read_FIO_data()
 
-    materials_byID = {}
-    for material in materials.values():
-        if material['MaterialId'] in materials_byID:
-            print('Found duplicate material ID: %s'.format(material['MaterialId']))
-        materials_byID[material['MaterialId']] = material['Ticker']
-
-    for recipe in recipes.values():
-        for item in recipe['Outputs']:
-            if item['Ticker'] in materials:
-                if 'RecipeList' in materials[item['Ticker']]:
-                    materials[item['Ticker']]['RecipeList'].append(recipe['StandardRecipeName'])
-                else:
-                    materials[item['Ticker']]['RecipeList'] = [recipe['StandardRecipeName']]
-            else:
-                print('recipe: {}, output: {}, not found in materials.'.format(recipe, item))
-    
-    for planet in planets.values():
-        for item in planet['Resources']:
-            if item['MaterialId'] in materials_byID:
-                if 'PlanetList' in materials[materials_byID[item['MaterialId']]]:
-                    materials[materials_byID[item['MaterialId']]]['PlanetList'].append(planet['PlanetNaturalId'])
-                else:
-                    materials[materials_byID[item['MaterialId']]]['PlanetList'] = [planet['PlanetNaturalId']]
-            else:
-                print('planet: {}, resource: {}, not found in materials.'.format(planet, item))
-
+    # create an "optimal" base setup for each building
     base_setups = {}
     for building in buildings.keys():
         base_list, building_count = calculate_single_building_base_setup(building, buildings)
         base_setups[building] = {'BaseList': base_list, 'BuildingCount': building_count}
     
-    # printAllMaterialOptions = True
-    # with open('material_options.txt', 'wt') as file:
-    #     for material in materials.values():
-    #         recipe_list = ''
-    #         planet_list = ''
-    #         optionsGT1 = False
-    #         if 'RecipeList' in material:
-    #             recipe_list = ','.join(material['RecipeList'])
-    #             if len(material['RecipeList']) > 1 or ('PlanetList' in material):
-    #                 optionsGT1 = True
-    #         if 'PlanetList' in material:
-    #             planet_list = ','.join(material['PlanetList'])
-    #             if len(material['PlanetList']) > 1:
-    #                 optionsGT1 = True
-    #         if printAllMaterialOptions or optionsGT1:
-    #             print('{}: {}| {}.'.format(material['Ticker'], recipe_list, planet_list),file=file)
-    
+    # Load the material/recipe selections used in calculations
     with open('material_selections.json', 'rt') as file:
         recipe_selections = json.load(file)
 
@@ -512,8 +440,8 @@ if __name__ == '__main__':
     Dsci = SCI.Engineer/100/DAY_TIME_MS
     Esci = SCI.Scientist/100/DAY_TIME_MS
 
-    PIOc = SETc = TECc = ENGc = SCIc = 500
     PIOc = 2.0e-7
+    PIOc = SETc = TECc = ENGc = SCIc = 1
     previous = [PIOc, SETc, TECc, ENGc, SCIc]
     for n in range(100):
         # PIOc = (            SETc*Bpio + TECc*Cpio + ENGc*Dpio + SCIc*Epio)/(1 - Apio)
