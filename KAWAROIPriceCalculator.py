@@ -314,9 +314,9 @@ if __name__ == '__main__':
         base_list, building_count = calculate_single_building_base_setup(building, buildings)
         base_setups[building] = {'BaseList': base_list, 'BuildingCount': building_count}
     
-    # Load the material/recipe selections used in calculations
-    with open('material_selections.json', 'rt') as file:
-        recipe_selections = json.load(file)
+    # Load the calulation options
+    with open('ROICalculatorOptions.json', 'rt') as file:
+        ROIOptions = json.load(file)
 
     # initialize costs
     material_costs = {}
@@ -329,16 +329,16 @@ if __name__ == '__main__':
     total_costs_new = {}
     for material in materials.keys():
         planet_specific_materials = ['MCG']
-        if not recipe_selections[material]:
+        if not ROIOptions['preferred_recipes'][material]:
             continue
-        elif '=>' in recipe_selections[material]:
-            recipe = recipes[recipe_selections[material]]
+        elif '=>' in ROIOptions['preferred_recipes'][material]:
+            recipe = recipes[ROIOptions['preferred_recipes'][material]]
             output = 0
             for cur in recipe['Outputs']:
                 if cur['Ticker'] == material:
                     output = cur['Amount']
         else:
-            planet = planets[recipe_selections[material]]
+            planet = planets[ROIOptions['preferred_recipes'][material]]
             planet_specific_materials = get_planet_build_requirements(planet)
             materialinfo = {}
             for resource in planet['Resources']:
