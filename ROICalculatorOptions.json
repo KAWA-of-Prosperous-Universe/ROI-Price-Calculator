@@ -1,4 +1,8 @@
 {
+  "fertile_planet": {
+    "ID": "UV-796b",
+    "Fertility": 106.6666675336433
+  },
   "preferred_recipes": {
     "AAR": "ELP:2xAU-1xKV-4xPCB-6xSWF=>3xAAR",
     "ABH": "PP4:125xNR-2xRBH=>2xABH",

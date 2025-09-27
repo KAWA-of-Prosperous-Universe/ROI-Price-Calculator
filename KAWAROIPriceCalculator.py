@@ -366,8 +366,11 @@ if __name__ == '__main__':
     for n in range(100):
         max_diff_elem = {'diff':-1, 'mat':''}
         for material in material_costs.keys():
-            
-            input_costs_temp, repair_costs_temp, desired_profit_temp, total_costs_temp = calculate_total_cost(material, material_costs[material].Extras['output'], material_costs[material].Extras['recipe']['Inputs'], buildings[material_costs[material].Extras['recipe']['BuildingTicker']]['BuildingCosts'], material_costs[material].Extras['recipe']['TimeMs'], buildings[material_costs[material].Extras['recipe']['BuildingTicker']]['AreaCost'], material_costs[material].Extras['planet_mats'], material_costs, input_costs, repair_costs, desired_profit, material_costs[material], base_setups[material_costs[material].Extras['recipe']['BuildingTicker']])
+            recipe_time = material_costs[material].Extras['recipe']['TimeMs']
+            # adjust recipe time for fertility
+            if material_costs[material].Extras['recipe']['BuildingTicker'] in ['FRM', 'ORC']:
+                recipe_time *= ROIOptions['fertile_planet']['Fertility']/100
+            input_costs_temp, repair_costs_temp, desired_profit_temp, total_costs_temp = calculate_total_cost(material, material_costs[material].Extras['output'], material_costs[material].Extras['recipe']['Inputs'], buildings[material_costs[material].Extras['recipe']['BuildingTicker']]['BuildingCosts'], recipe_time, buildings[material_costs[material].Extras['recipe']['BuildingTicker']]['AreaCost'], material_costs[material].Extras['planet_mats'], material_costs, input_costs, repair_costs, desired_profit, material_costs[material], base_setups[material_costs[material].Extras['recipe']['BuildingTicker']])
             population_diff = total_costs_temp - total_costs[material]
             diff_sum = population_diff.Pioneer+population_diff.Settler+population_diff.Technician+population_diff.Engineer+population_diff.Scientist
             if diff_sum > max_diff_elem['diff']:
@@ -480,6 +483,9 @@ if __name__ == '__main__':
             if not recipe['Outputs']:
                 continue
             recipe_time = recipe['TimeMs']
+            # adjust recipe time for fertility
+            if recipe['BuildingTicker'] in ['FRM', 'ORC']:
+                recipe_time *= ROIOptions['fertile_planet']['Fertility']/100
             building = buildings[recipe['BuildingTicker']]
             recipe_cost = calculate_population_cost(1, building, recipe_time)
             input_costs_temp, repair_costs_temp, desired_profit_temp, total_costs_temp = calculate_total_cost('', 1, recipe['Inputs'], building['BuildingCosts'], recipe['TimeMs'], building['AreaCost'], planet_mats, material_costs, input_costs, repair_costs, desired_profit, recipe_cost, base_setups[recipe['BuildingTicker']], False)

@@ -3,13 +3,24 @@ import json
 from tkinter import *
 from tkinter import ttk
 
-def runGUI(material_options, ROIOptions_old):
+def runGUI(material_options, ROIOptions_old, fertile_planets):
     root = Tk()
     root.title("KAWA ROI Calculator Option Selector")
 
     mainframe = ttk.Frame(root, padding=(3, 3, 12, 12))
     mainframe.pack(fill=BOTH, expand=1)
 
+    # show fertile  planet options
+    fertile_planet_list = []
+    for key in fertile_planets.keys():
+        fertile_planet_list.append('{}|{:.1f}'.format(key, fertile_planets[key]))
+    fertileframe = ttk.Frame(mainframe)
+    ttk.Label(fertileframe, text='Fertile Planet: ').pack(side=LEFT)
+    fertile_planet_selection = StringVar(value='{}|{:.1f}'.format(ROIOptions_old['fertile_planet']['ID'], ROIOptions_old['fertile_planet']['Fertility']))
+    OptionMenu(fertileframe, fertile_planet_selection, *fertile_planet_list).pack(side=LEFT)
+    fertileframe.pack()
+
+    # list all the materials and their recipe/planet options
     scrollcanvas = Canvas(mainframe, width=300,height=300)
     scrollbar = ttk.Scrollbar(mainframe, orient=VERTICAL)
     scrollbar.config(command=scrollcanvas.yview)
@@ -22,7 +33,7 @@ def runGUI(material_options, ROIOptions_old):
         else:
             cur_options = ['']
         temp_frame = ttk.Frame(scrollframe)
-        ttk.Label(temp_frame, text=key).pack(side=LEFT)
+        ttk.Label(temp_frame, text='{}: '.format(key)).pack(side=LEFT)
         material_selection_vars[key] = StringVar(value=ROIOptions_old['preferred_recipes'][key])
         temp = OptionMenu(temp_frame, material_selection_vars[key], *cur_options)
         if len(cur_options) > 1:
@@ -52,7 +63,8 @@ def runGUI(material_options, ROIOptions_old):
     root.mainloop()
 
     # create an ROIOptions dictionary to pass all selected values to user
-    ROIOptions = {'preferred_recipes': {}}
+    fertile_planet_key,_ = fertile_planet_selection.get().split('|')
+    ROIOptions = {'fertile_planet': {'ID': fertile_planet_key, 'Fertility': fertile_planets[fertile_planet_key]}, 'preferred_recipes': {}}
     for key in sorted(material_selection_vars.keys()):
         ROIOptions['preferred_recipes'][key] = material_selection_vars[key].get()
     
@@ -71,6 +83,11 @@ if __name__ == '__main__':
         if 'RecipeList' in material:
             option_list.extend(material['RecipeList'])
         material_options[material['Ticker']] = option_list
+
+    fertile_planets = {}
+    for key in planets.keys():
+        if planets[key]['Fertility'] > -1:
+            fertile_planets[key] = ((planets[key]['Fertility'] * 10 / 33) + 1) * 100
     
     # with open('material_options.json', 'wt') as file:
     #     json.dump(material_options, file, indent='  ')
@@ -80,7 +97,7 @@ if __name__ == '__main__':
         ROIOptions_old = json.load(file)
 
     # Present options to user and save result
-    ROIOptions = runGUI(material_options, ROIOptions_old)
+    ROIOptions = runGUI(material_options, ROIOptions_old, fertile_planets)
     
     with open('ROICalculatorOptions.json', 'wt') as file:
         json.dump(ROIOptions, file, indent='  ')
