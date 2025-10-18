@@ -490,6 +490,101 @@ if __name__ == '__main__':
             material_costs_ts[material] = material_costs[material].Pioneer*PIOc + material_costs[material].Settler*SETc + material_costs[material].Technician*TECc + material_costs[material].Engineer*ENGc + material_costs[material].Scientist*SCIc
             file.write('{}, {}, {}, {}, {}, {}\n'.format(material, total_costs_ts[material], repair_costs_ts[material], input_costs_ts[material], desired_profit_ts[material], material_costs_ts[material]))
     
+    # check ROI
+    # consumable costs per day per 100 units of population
+    pio_cost_check = 0
+    for item in [{'mat':'COF','amount':0.5},{'mat':'DW','amount':4},{'mat':'RAT','amount':4},{'mat':'OVE','amount':0.5},{'mat':'PWO','amount':0.2}]:
+        pio_cost_check = pio_cost_check + total_costs_ts[item['mat']]*item['amount']
+    pio_cost_check /= 100
+    set_cost_check = 0
+    for item in [{'mat':'DW','amount':5},{'mat':'RAT','amount':6},{'mat':'KOM','amount':1},{'mat':'EXO','amount':0.5},{'mat':'REP','amount':0.2},{'mat':'PT','amount':0.5}]:
+        set_cost_check = set_cost_check + total_costs_ts[item['mat']]*item['amount']
+    set_cost_check /= 100
+    tec_cost_check = 0
+    for item in [{'mat':'DW','amount':7.5},{'mat':'RAT','amount':7},{'mat':'ALE','amount':1},{'mat':'MED','amount':0.5},{'mat':'SC','amount':0.1},{'mat':'HMS','amount':0.5},{'mat':'SCN','amount':0.1}]:
+        tec_cost_check = tec_cost_check + total_costs_ts[item['mat']]*item['amount']
+    tec_cost_check /= 100
+    eng_cost_check = 0
+    for item in [{'mat':'DW','amount':10},{'mat':'MED','amount':0.5},{'mat':'GIN','amount':1},{'mat':'FIM','amount':7},{'mat':'VG','amount':0.2},{'mat':'HSS','amount':0.2},{'mat':'PDA','amount':0.1}]:
+        eng_cost_check = eng_cost_check + total_costs_ts[item['mat']]*item['amount']
+    eng_cost_check /= 100
+    sci_cost_check = 0
+    for item in [{'mat':'DW','amount':10},{'mat':'MED','amount':0.5},{'mat':'WIN','amount':1},{'mat':'MEA','amount':7},{'mat':'NST','amount':0.1},{'mat':'LC','amount':0.2},{'mat':'WS','amount':0.1}]:
+        sci_cost_check = sci_cost_check + total_costs_ts[item['mat']]*item['amount']
+    sci_cost_check /= 100
+    for material in total_costs_ts.keys():
+        recipe = material_costs[material].Extras['recipe']
+        output = material_costs[material].Extras['output']
+        planet_specific_materials = material_costs[material].Extras['planet_mats']
+        base_setup = base_setups[recipe['BuildingTicker']]
+        building = buildings[recipe['BuildingTicker']]
+        runs_per_day = DAY_TIME_MS / recipe['TimeMs']
+
+        # Input material costs
+        input_cost_check = 0
+        for input_mat in recipe["Inputs"]:
+            input_cost_check += input_mat['Amount']*total_costs_ts[input_mat['Ticker']]
+        input_cost_check *= runs_per_day*base_setup['BuildingCount']
+
+        # Population costs
+        pop_cost_check = base_setup['BuildingCount']*(building['Pioneers']*pio_cost_check + building['Settlers']*set_cost_check + building['Technicians']*tec_cost_check + building['Engineers']*eng_cost_check + building['Scientists']*sci_cost_check)
+
+        # Repair costs
+        repair_cost_check = 0
+        for cur_mat in buildings[building['Ticker']]['BuildingCosts']:
+            repair_cost_check += base_setup['BuildingCount']*(total_costs_ts[cur_mat['CommodityTicker']]*math.ceil(cur_mat['Amount']*REPAIR_PERIOD_DAYS/180))
+        for cur_mat in planet_specific_materials:
+            mat_build_quantity = 1
+            if cur_mat == 'MCG':
+                mat_build_quantity = 4*building['AreaCost']
+            elif cur_mat == 'AEF':
+                mat_build_quantity = math.ceil(building['AreaCost']/3)
+            elif cur_mat == 'SEA':
+                mat_build_quantity = 1*building['AreaCost']
+            elif cur_mat == 'INS':
+                mat_build_quantity = 10*building['AreaCost']
+            elif cur_mat in ['HSE', 'TSH', 'BL', 'MGC']:
+                mat_build_quantity = 1
+            else:
+                print('ERROR: planet material not recognized: {}'.format(cur_mat))
+            repair_cost_check += base_setup['BuildingCount']*(total_costs_ts[cur_mat]*math.ceil(mat_build_quantity*REPAIR_PERIOD_DAYS/180))
+        repair_cost_check /= REPAIR_PERIOD_DAYS
+
+        # Build costs
+        build_cost_check = 0
+        for cur_building in base_setup['BaseList']:
+            for cur_mat in buildings[cur_building['Ticker']]['BuildingCosts']:
+                build_cost_check += cur_building['Count']*(total_costs_ts[cur_mat['CommodityTicker']]*cur_mat['Amount'])
+            for cur_mat in planet_specific_materials:
+                mat_build_quantity = 1
+                if cur_mat == 'MCG':
+                    mat_build_quantity = 4*cur_building['AreaCost']
+                elif cur_mat == 'AEF':
+                    mat_build_quantity = math.ceil(cur_building['AreaCost']/3)
+                elif cur_mat == 'SEA':
+                    mat_build_quantity = 1*cur_building['AreaCost']
+                elif cur_mat == 'INS':
+                    mat_build_quantity = 10*cur_building['AreaCost']
+                elif cur_mat in ['HSE', 'TSH', 'BL', 'MGC']:
+                    mat_build_quantity = 1
+                else:
+                    print('ERROR: planet material not recognized: {}'.format(cur_mat))
+                build_cost_check += cur_building['Count']*(total_costs_ts[cur_mat]*mat_build_quantity)
+
+        # Gross Profit
+        gross_profit_check = 0
+        if recipe["Outputs"]:
+            for output_mat in recipe["Outputs"]:
+                gross_profit_check += output_mat['Amount']*total_costs_ts[output_mat['Ticker']]
+        else:
+            gross_profit_check += output*total_costs_ts[material]
+        gross_profit_check *= runs_per_day*base_setup['BuildingCount']
+
+        # Build cost / [Net profit per day (Gross Profit - Input material costs - repair costs - population costs)] = ROI
+        net_profit_check = gross_profit_check - input_cost_check - repair_cost_check - pop_cost_check
+        ROI_check = build_cost_check / net_profit_check
+        print("Mat: {}, ROI: {} -- net: {}, build cost: {}, gross: {}, repair: {}, input: {}, pop: {}".format(material, ROI_check, net_profit_check, build_cost_check, gross_profit_check, repair_cost_check, input_cost_check, pop_cost_check))
+
     with open('recipe_costs.csv', 'w') as file:
         file.write('{}, {}, {}, {}, {}, {}\n'.format('recipe', 'total cost', 'repair cost', 'input cost', 'desired profit', 'base recipe cost'))
         planet_mats = ['MCG']
