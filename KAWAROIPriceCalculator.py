@@ -2,6 +2,7 @@ import sys
 import json
 import math
 import KAWAUtils
+# import numpy
 
 DAY_TIME_MS = 24*60*60*1000
 REPAIR_PERIOD_DAYS = 60
@@ -454,6 +455,8 @@ if __name__ == '__main__':
     Csci = SCI.Technician/100/DAY_TIME_MS
     Dsci = SCI.Engineer/100/DAY_TIME_MS
     Esci = SCI.Scientist/100/DAY_TIME_MS
+
+    # A = numpy.array([[Apio-1, Bpio, Cpio, Dpio, Epio],[Aset, Bset-1, Cset, Dset, Eset],[Atec, Btec, Ctec-1, Dtec, Etec],[Aeng, Beng, Ceng, Deng-1, Eeng],[Asci, Bsci, Csci, Dsci, Esci]])
 
     PIOc = SETc = TECc = ENGc = SCIc = 1e-7
     PIOc_target = 0.33e-7
