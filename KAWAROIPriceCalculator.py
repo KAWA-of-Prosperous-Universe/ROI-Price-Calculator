@@ -82,19 +82,22 @@ def get_planet_build_requirements(planet):
             planet_specific_materials.append(requirement['MaterialTicker'])
     return planet_specific_materials
 
-def get_recipe_output_from_material_type(material_type, factor):
+def get_recipe_output_from_material_type(material_type, factor, recipes):
     # https://pct.fnar.net/planet/
     if material_type == 'MINERAL':
         recipe_key = 'EXT:=>'
-        output = 100*0.7/2*factor
+        output = 100*0.7*factor
     elif material_type == 'GASEOUS':
         recipe_key = 'COL:=>'
-        output = 100*0.6/4*factor
+        output = 100*0.6*factor
     elif material_type == 'LIQUID':
         recipe_key = 'RIG:=>'
-        output = 100*0.7/5*factor
+        output = 100*0.7*factor
     else:
         print('ERROR: unknown resource type: {}'.format(material_type))
+    
+    # convert from output/day to output/recipe run
+    output = output * recipes[recipe_key]['TimeMs']/DAY_TIME_MS
     
     return recipe_key, output
 
@@ -157,6 +160,8 @@ def calculate_single_building_base_setup(building_ticker, buildings):
     while(True):
         # calculation habitation needs for current number of buildings
         building_list = calculate_habitation_needs(pioneers*building_count, settlers*building_count, technicians*building_count, engineers*building_count, scientists*building_count)
+        # Core Module is always needed
+        building_list.append({'Ticker': 'CM', 'Count': 1})
         building_list.append({'Ticker': building_ticker, 'Count': building_count})
 
         # calculate area needed for current set of buildings
@@ -175,6 +180,8 @@ def calculate_single_building_base_setup(building_ticker, buildings):
     building_count = building_count - 1
     building_list = calculate_habitation_needs(pioneers*building_count, settlers*building_count, technicians*building_count, engineers*building_count, scientists*building_count)
     building_list.append({'Ticker': building_ticker, 'Count': building_count})
+    # Core Module is always needed
+    building_list.append({'Ticker': 'CM', 'Count': 1})
 
     # Add area and material costs for all the buildings to this structure
     for building in building_list:
@@ -204,15 +211,15 @@ def calculate_desired_profit(cur_material, output_count, input_costs, repair_cos
         # add something for MCG and any other planet based materials
         for mat_ticker in planet_mats:
             if mat_ticker == 'MCG':
-                mat_build_quantity = 4*building['AreaCost']
+                mat_build_quantity = 4*building['AreaCost']*building['Count']
             elif mat_ticker == 'AEF':
-                mat_build_quantity = math.ceil(building['AreaCost']/3)
+                mat_build_quantity = math.ceil(building['AreaCost']/3)*building['Count']
             elif mat_ticker == 'SEA':
-                mat_build_quantity = 1*building['AreaCost']
+                mat_build_quantity = 1*building['AreaCost']*building['Count']
             elif mat_ticker == 'INS':
-                mat_build_quantity = 10*building['AreaCost']
+                mat_build_quantity = 10*building['AreaCost']*building['Count']
             elif mat_ticker in ['HSE', 'TSH', 'BL', 'MGC']:
-                mat_build_quantity = 1
+                mat_build_quantity = 1*building['Count']
             else:
                 print('ERROR: planet material not recognized: {}'.format(mat_ticker))
             if use_cur_material_costs and mat_ticker == cur_material:
@@ -337,6 +344,9 @@ if __name__ == '__main__':
             for cur in recipe['Outputs']:
                 if cur['Ticker'] == material:
                     output = cur['Amount']
+                    # fudge output for NA
+                    if material == 'NA':
+                        output*=10
         else:
             planet = planets[ROIOptions['preferred_recipes'][material]]
             planet_specific_materials = get_planet_build_requirements(planet)
@@ -349,7 +359,7 @@ if __name__ == '__main__':
             if 'ResourceType' not in materialinfo:
                 print('ERROR: {} not found.'.format(material))
             
-            recipe_key, output = get_recipe_output_from_material_type(materialinfo['ResourceType'], materialinfo['Factor'])
+            recipe_key, output = get_recipe_output_from_material_type(materialinfo['ResourceType'], materialinfo['Factor'], recipes)
             recipe = recipes[recipe_key]
 
         # print('{},{},{}'.format(material, recipe['StandardRecipeName'], output))
@@ -386,10 +396,12 @@ if __name__ == '__main__':
             #     print("repair_costs_temp ({}) does not equal repair_costs[{}] ({})".format(repair_costs_temp, material, repair_costs[material]))
             # if total_costs_temp != total_costs[material]:
             #     print("total_costs_temp ({}) does not equal total_costs[{}] ({})".format(total_costs_temp, material, total_costs[material]))
-        print('Largest difference: {} {} ({}, {}, {}, {}, {})'.format(max_diff_elem['mat'], max_diff_elem['diff'], total_costs[max_diff_elem['mat']].Pioneer, total_costs[max_diff_elem['mat']].Settler, total_costs[max_diff_elem['mat']].Technician, total_costs[max_diff_elem['mat']].Engineer, total_costs[max_diff_elem['mat']].Scientist))
+        
         if max_diff_elem['diff'] < 0.001:
             print('Iterations completed at n={}'.format(n))
             break
+
+        print('Largest difference: {} {} ({}, {}, {}, {}, {})'.format(max_diff_elem['mat'], max_diff_elem['diff'], total_costs[max_diff_elem['mat']].Pioneer, total_costs[max_diff_elem['mat']].Settler, total_costs[max_diff_elem['mat']].Technician, total_costs[max_diff_elem['mat']].Engineer, total_costs[max_diff_elem['mat']].Scientist))
 
     # Cost all recipes based on the selected material recipes
     
@@ -443,10 +455,11 @@ if __name__ == '__main__':
     Dsci = SCI.Engineer/100/DAY_TIME_MS
     Esci = SCI.Scientist/100/DAY_TIME_MS
 
-    PIOc = 2.0e-7
-    PIOc = SETc = TECc = ENGc = SCIc = 1
+    PIOc = SETc = TECc = ENGc = SCIc = 1e-7
+    PIOc_target = 0.33e-7
     previous = [PIOc, SETc, TECc, ENGc, SCIc]
     for n in range(100):
+        PIOc = PIOc_target
         # PIOc = (            SETc*Bpio + TECc*Cpio + ENGc*Dpio + SCIc*Epio)/(1 - Apio)
         SETc = (PIOc*Aset +             TECc*Cset + ENGc*Dset + SCIc*Eset)/(1 - Bset)
         TECc = (PIOc*Atec + SETc*Btec +             ENGc*Dtec + SCIc*Etec)/(1 - Ctec)
@@ -454,6 +467,7 @@ if __name__ == '__main__':
         SCIc = (PIOc*Asci + SETc*Bsci + TECc*Csci + ENGc*Dsci            )/(1 - Esci)
         print('PIO: {}, SET: {}, TEC: {}, ENG: {}, SCI: {}'.format(PIOc, SETc, TECc, ENGc, SCIc))
         current = [PIOc, SETc, TECc, ENGc, SCIc]
+        print('PIOc initial = {}; PIOc current = {}'.format(PIOc, (SETc*Bpio + TECc*Cpio + ENGc*Dpio + SCIc*Epio)/(1 - Apio)))
         test = map(lambda a,b: abs(a-b), current, previous)
         if max(map(lambda a,b: abs(a-b), current, previous)) < 1e-16:
             print('iteration finished at n = {}'.format(n))
@@ -510,7 +524,7 @@ if __name__ == '__main__':
             planet_specific_materials = get_planet_build_requirements(planet)
             for item in planet['Resources']:
                 material_ticker = materials_byID[item['MaterialId']]
-                recipe_key, output = get_recipe_output_from_material_type(item['ResourceType'], item['Factor'])
+                recipe_key, output = get_recipe_output_from_material_type(item['ResourceType'], item['Factor'], recipes)
                 recipe = recipes[recipe_key]
                 building = buildings[recipe['BuildingTicker']]
                 base_cost = {}
