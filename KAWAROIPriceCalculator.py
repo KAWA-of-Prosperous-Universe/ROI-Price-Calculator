@@ -588,7 +588,7 @@ if __name__ == '__main__':
             # Build cost / [Net profit per day (Gross Profit - Input material costs - repair costs - population costs)] = ROI
             net_profit_check = gross_profit_check - input_cost_check - repair_cost_check - pop_cost_check
             ROI_check = build_cost_check / net_profit_check
-            file.write("{},{}{},{},{},{},{},{}\n".format(material, ROI_check, net_profit_check, build_cost_check, gross_profit_check, repair_cost_check, input_cost_check, pop_cost_check))
+            file.write("{},{},{},{},{},{},{},{}\n".format(material, ROI_check, net_profit_check, build_cost_check, gross_profit_check, repair_cost_check, input_cost_check, pop_cost_check))
 
     with open('recipe_costs.csv', 'w') as file:
         file.write('{},{},{},{},{},{}\n'.format('recipe', 'total cost', 'repair cost', 'input cost', 'desired profit', 'base recipe cost'))
